@@ -14,7 +14,6 @@ namespace Models.DTO
         public decimal Price { get; set; }
         public string Description { get; set; } = null!;
         public int CategoryId { get; set; }
-        public string UserId { get; set; }  // المفتاح الأجنبي للمستخدم
 
         public string? CategoryName { get; set; }
         public int Stock { get; set; }

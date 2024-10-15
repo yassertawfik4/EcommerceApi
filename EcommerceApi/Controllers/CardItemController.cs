@@ -1,6 +1,7 @@
 ﻿using data.Repository.IRepository;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Models;
 using Models.DTO;
@@ -13,16 +14,19 @@ namespace EcommerceApi.Controllers
     public class CardItemController : ControllerBase
     {
         private readonly ICardItemRepository cardItemRepository;
+        private readonly UserManager<ApplicationUser> usermanager;
 
-        public CardItemController(ICardItemRepository cardItemRepository)
+        public CardItemController(ICardItemRepository cardItemRepository, UserManager<ApplicationUser> usermanager)
         {
             this.cardItemRepository = cardItemRepository;
+            this.usermanager = usermanager;
         }
         //display
         [HttpGet]
         public IActionResult AllCardItem()
         {
-            var res = cardItemRepository.GetAll();
+            var user=usermanager.GetUserId(User);
+            var res = cardItemRepository.GetAll().Where(t=>t.UserId==user);
 
             List<CardItemDTO> cardItemList = new List<CardItemDTO>();
             foreach (var item in res)
@@ -100,7 +104,8 @@ namespace EcommerceApi.Controllers
         [HttpDelete("DeleteAllCardItems")]
         public IActionResult DeleteAllCardItems()
         {
-            var cardItems = cardItemRepository.GetAll();
+            var user = usermanager.GetUserId(User);
+            var cardItems = cardItemRepository.GetAll().Where(t => t.UserId == user);
 
             if (cardItems == null || !cardItems.Any())
             {

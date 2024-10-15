@@ -1,4 +1,4 @@
-using data;
+﻿using data;
 using data.Repository;
 using data.Repository.IRepository;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -15,24 +15,24 @@ namespace EcommerceApi
     {
         public static void Main(string[] args)
         {
-            var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
-
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+            // إعداد CORS
+            var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy(name: MyAllowSpecificOrigins,
-                  policy =>
-                  {
-
-                      policy.AllowAnyOrigin();
-                  
-                  });
+                options.AddPolicy(MyAllowSpecificOrigins, builder =>
+                {
+                    builder.AllowAnyOrigin()
+                           .AllowAnyHeader()
+                           .AllowAnyMethod();
+                });
             });
 
+            // إضافة الخدمات
             builder.Services.AddControllers();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(o =>
             {
@@ -50,45 +50,46 @@ namespace EcommerceApi
                 });
                 o.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
                 {
-                    Name="Authorization",
-                    Type=SecuritySchemeType.ApiKey,
-                    Scheme="Bearer",
-                    BearerFormat="JWT",
-                    In=ParameterLocation.Header,
-                    Description="Enter The Jwt Key"
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer",
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Description = "Enter The Jwt Key"
                 });
-                o.AddSecurityRequirement(new OpenApiSecurityRequirement() {
+                o.AddSecurityRequirement(new OpenApiSecurityRequirement()
+                {
                     {
                         new OpenApiSecurityScheme()
                         {
-                            Reference =new OpenApiReference()
+                            Reference = new OpenApiReference()
                             {
-                                Type=ReferenceType.SecurityScheme,
-                                Id="Bearer"
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
                             },
-                            Name="Bearer",
-                            In=ParameterLocation.Header
+                            Name = "Bearer",
+                            In = ParameterLocation.Header
                         },
                         new List<string>()
                     }
                 });
             });
 
-            builder.Services.AddDbContext<ApplicationDbContext>(
-            options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+            // إعداد قاعدة البيانات
+            builder.Services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-           .AddEntityFrameworkStores<ApplicationDbContext>()
-           .AddDefaultTokenProviders();
+                .AddEntityFrameworkStores<ApplicationDbContext>()
+                .AddDefaultTokenProviders();
 
+            // إضافة المخازن
             builder.Services.AddScoped<IProductRepository, ProductRepository>();
             builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
             builder.Services.AddScoped<ICardItemRepository, CardItemRepository>();
             builder.Services.AddScoped<IFavoriteItemRepository, FavoriteItemRepository>();
 
-
-
-
+            // إعداد المصادقة
             builder.Services.AddAuthentication(o =>
             {
                 o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -96,35 +97,35 @@ namespace EcommerceApi
                 o.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer(a =>
             {
-                a.RequireHttpsMetadata=false;
-                a.SaveToken=true;
+                a.RequireHttpsMetadata = false;
+                a.SaveToken = true;
                 a.TokenValidationParameters = new TokenValidationParameters()
                 {
                     ValidateIssuer = true,
                     ValidIssuer = builder.Configuration["JWT:Issuer"],
                     ValidateAudience = false,
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey=new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:SecretKey"]))
-
-
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:SecretKey"]))
                 };
             });
-            // ????? ?????? ???????? ???????? (Authorization)
+
+            // إضافة التراخيص
             builder.Services.AddAuthorization();
+
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
+            // استخدام CORS
+            app.UseCors(MyAllowSpecificOrigins);
+
+            // إعداد خادم Swagger في وضع التطوير
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-            app.UseCors(MyAllowSpecificOrigins);
+
             app.UseHttpsRedirection();
-
             app.UseAuthorization();
-
-
             app.MapControllers();
 
             app.Run();

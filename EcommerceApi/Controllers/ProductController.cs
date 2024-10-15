@@ -101,34 +101,47 @@ namespace EcommerceApi.Controllers
             {
 
                 return Ok(productDTO);
+
             }
 
         }
         [HttpPut("{Id}")]
-        public IActionResult EditProduct(int Id,ProductDTO productDTO)
+        public IActionResult EditProduct(int Id, [FromBody] ProductDTO productDTO)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                var product = productRepository.GetOne(t => t.Id == Id);
+                return BadRequest(ModelState);
+            }
 
-                product.Id = productDTO.Id;
-                product.Name = productDTO.Name;
-                product.CategoryId = productDTO.CategoryId;
-                product.Description = productDTO.Description;
-                product.Price = productDTO.Price;
-                product.Quantity = productDTO.Quantity;
-                product.Stock = productDTO.Stock;
-                product.Image = productDTO.Image;
+            var product = productRepository.GetOne(t => t.Id == Id);
 
+            if (product == null)
+            {
+                return NotFound($"Product with Id = {Id} not found.");
+            }
+
+            // Update product properties
+            product.Name = productDTO.Name;
+            product.CategoryId = productDTO.CategoryId;
+            product.Description = productDTO.Description;
+            product.Price = productDTO.Price;
+            product.Quantity = productDTO.Quantity;
+            product.Stock = productDTO.Stock;
+            product.Image = productDTO.Image;
+
+            try
+            {
                 productRepository.UpdateProduct(product);
                 productRepository.Save();
                 return Ok(product);
             }
-            else
+            catch (Exception ex)
             {
-                return BadRequest();
+                // Handle any exception that might occur during the update
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+
         [HttpDelete]
         public IActionResult DeleteProduct(int Id)
         {

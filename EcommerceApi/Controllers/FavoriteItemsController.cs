@@ -1,6 +1,7 @@
 ﻿using data.Repository.IRepository;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Models;
 using Models.DTO;
@@ -13,15 +14,18 @@ namespace EcommerceApi.Controllers
     public class FavoriteItemsController : ControllerBase
     {
         private readonly IFavoriteItemRepository favoriteItemRepository;
+        private readonly UserManager<ApplicationUser> usermanager;
 
-        public FavoriteItemsController(IFavoriteItemRepository favoriteItemRepository)
+        public FavoriteItemsController(IFavoriteItemRepository favoriteItemRepository, UserManager<ApplicationUser> usermanager)
         {
             this.favoriteItemRepository = favoriteItemRepository;
+            this.usermanager = usermanager;
         }
         [HttpGet]
         public IActionResult GetAll()
         {
-            var items = favoriteItemRepository.GetAll();
+            var user = usermanager.GetUserId(User);
+            var items = favoriteItemRepository.GetAll().Where(t=>t.UserId==user);
 
             List<FavoriteItemDTO>favoriteItems = new List<FavoriteItemDTO>();
             foreach (var item in items)
@@ -49,6 +53,7 @@ namespace EcommerceApi.Controllers
         {
             if (ModelState.IsValid)
             {
+
                 FavoriteItem favoriteItem = new FavoriteItem()
                 {
                     Id = item.Id,
@@ -89,8 +94,13 @@ namespace EcommerceApi.Controllers
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var res = favoriteItemRepository.GetOne(t =>t.Id==id);
-            favoriteItemRepository.Delete(res);
+            var favoriteItem = favoriteItemRepository.GetOne(t => t.Id == id);
+            if (favoriteItem == null)
+            {
+                return NotFound(); // Return 404 if item is not found
+            }
+
+            favoriteItemRepository.Delete(favoriteItem);
             favoriteItemRepository.Save();
             return Ok();
         }

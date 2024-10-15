@@ -64,28 +64,31 @@ namespace EcommerceApi.Controllers
                     if (cheack)
                     {
                         await signInManager.SignInAsync(user, loginDto.RememberMe);
-                        var claims= new List<Claim>();
-                        claims.Add(new Claim(ClaimTypes.Name,user.UserName));
-                        claims.Add(new Claim(ClaimTypes.NameIdentifier,user.Id));
-                        claims.Add(new Claim(JwtRegisteredClaimNames.Jti,Guid.NewGuid().ToString()));
-                        var Roles =await userManager.GetRolesAsync(user);
+                        var claims = new List<Claim>
+                        {
+                            new Claim(ClaimTypes.Name, user.UserName),
+                            new Claim(ClaimTypes.NameIdentifier, user.Id),
+                            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                        };
+                        var Roles = await userManager.GetRolesAsync(user);
                         foreach (var role in Roles)
                         {
-                            claims.Add(new Claim(ClaimTypes.Role,role.ToString()));
+                            claims.Add(new Claim(ClaimTypes.Role, role.ToString()));
                         }
                         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:SecretKey"]));
-                        var sc= new SigningCredentials(key,SecurityAlgorithms.HmacSha256);
+                        var sc = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
                         var token = new JwtSecurityToken(
                             claims: claims,
                             issuer: configuration["JWT:Issuer"],
                             audience: configuration["JWT:Audience"],
-                            expires: DateTime.Now.AddHours(1),
+                            expires: DateTime.Now.AddDays(2),
                             signingCredentials: sc
-                            );
+                        );
                         var _token = new
                         {
                             token = new JwtSecurityTokenHandler().WriteToken(token),
-                            expiration = token.ValidTo
+                            expiration = token.ValidTo,
+                            userId = user.Id
                         };
                         return Ok(_token);
                     }
@@ -101,6 +104,7 @@ namespace EcommerceApi.Controllers
             }
             return BadRequest(ModelState);
         }
+
         [HttpGet("AllUsers")]
         public IActionResult GetAllUsers()
         {
@@ -119,5 +123,63 @@ namespace EcommerceApi.Controllers
 
             return Ok(model);
         }
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteUser(string id)
+        {
+            var user= await userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+            var result = await userManager.DeleteAsync(user);
+            if (result.Succeeded)
+            {
+                return Ok(result);
+            }
+            return BadRequest(result);
+        }
+
+        [HttpGet("UserDetails/{id}")]
+        
+        public async Task<IActionResult> GetUser(string id)
+        {
+            var user=await userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+            var model = new UserDTO
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                
+                LastName = user.LastName,
+                CardCount = context.CardItems.Count(),
+                FavoriteCount = context.favoriteItems.Count(),
+                Age=user.Age,
+                Email=user.Email,
+                UserName=user.UserName,
+            };
+            return Ok(model);
+        }
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            try
+            {
+                await signInManager.SignOutAsync();
+                return Ok(new { message = "Logged out successfully" }); 
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Logout failed", error = ex.Message }); 
+            }
+        }
+
+
+
+
+
+
     }
 }
