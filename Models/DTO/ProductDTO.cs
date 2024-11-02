@@ -19,6 +19,7 @@ namespace Models.DTO
         public int Stock { get; set; }
         public int Quantity { get; set; }
 
-        public string? Image { get; set; }
+        public IFormFile? ImageFile { get; set; }
+        public string? ImageUrl { get; set; } // URL to access the image
     }
 }

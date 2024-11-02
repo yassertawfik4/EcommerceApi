@@ -1,6 +1,8 @@
 ﻿using data.Repository.IRepository;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Models;
+using Models.DTO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,7 +42,7 @@ namespace data.Repository
 
         public Product GetOne(Expression<Func<Product, bool>> filter)
         {
-            return context.Products.Where(filter).FirstOrDefault();
+            return context.Products.Include(p => p.Category).Where(filter).FirstOrDefault();
         }
 
         public void Save()
@@ -51,6 +53,10 @@ namespace data.Repository
         public void UpdateProduct(Product product)
         {
             context.Products.Update(product);
+        }
+        public List<Product> GetAllProductByCategoryName(string name)
+        {
+            return context.Products.Where(t => t.Category.Name == name).ToList();
         }
     }
 }

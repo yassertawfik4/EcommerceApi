@@ -1,7 +1,9 @@
 ﻿using data.Repository;
 using data.Repository.IRepository;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
 using Models;
 using Models.DTO;
 using System.Collections.Generic;
@@ -13,10 +15,12 @@ namespace EcommerceApi.Controllers
     public class ProductController : ControllerBase
     {
         private readonly IProductRepository productRepository;
-       
-        public ProductController(IProductRepository productRepository)
+        private readonly IWebHostEnvironment hostEnvironment;
+
+        public ProductController(IProductRepository productRepository, IWebHostEnvironment hostEnvironment)
         {
             this.productRepository = productRepository;
+            this.hostEnvironment = hostEnvironment;
         }
         //display
         [HttpGet("AllProduct")]
@@ -32,11 +36,12 @@ namespace EcommerceApi.Controllers
                     Name=item.Name,
                     CategoryId=item.CategoryId,
                     Description=item.Description,
-                    Image=item.Image,
+                    ImageUrl = item.Image,
                     Price = item.Price,
                     Quantity = item.Quantity,
                     Stock = item.Stock,
                     CategoryName=item.Category.Name,
+
                 });
             }
             if (res == null)
@@ -50,21 +55,48 @@ namespace EcommerceApi.Controllers
             }
         }
         [HttpPost("CreateProduct")]
-        public IActionResult Create(ProductDTO productDTO)
+        public async Task<IActionResult> Create(ProductDTO productDTO)
         {
             if (ModelState.IsValid)
             {
-                Product product =new Product()
+                Product product = new Product()
                 {
                     Id = productDTO.Id,
                     Name = productDTO.Name,
                     CategoryId = productDTO.CategoryId,
                     Description = productDTO.Description,
-                    Image=productDTO.Image,
                     Price = productDTO.Price,
                     Quantity = productDTO.Quantity,
                     Stock = productDTO.Stock,
                 };
+
+                if (productDTO.ImageFile != null && productDTO.ImageFile.Length > 0)
+                {
+                    // استخدم الاسم الأصلي للصورة
+                    var fileName = Path.GetFileName(productDTO.ImageFile.FileName);
+
+                    // حدد المسار لحفظ الصورة في wwwroot/Images
+                    var imagesDirectory = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Images");
+
+                    // تأكد من أن الدليل موجود
+                    if (!Directory.Exists(imagesDirectory))
+                    {
+                        Directory.CreateDirectory(imagesDirectory);
+                    }
+
+                    // تحديد المسار الكامل للصورة الجديدة
+                    var filePath = Path.Combine(imagesDirectory, fileName);
+
+                    // حفظ الملف
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await productDTO.ImageFile.CopyToAsync(stream);
+                    }
+
+                    // تعيين خاصية ImagePath للمنتج
+                    product.Image = $"/src/assets/{fileName}";
+                }
+
                 productRepository.AddProduct(product);
                 productRepository.Save();
                 return Ok();
@@ -74,6 +106,8 @@ namespace EcommerceApi.Controllers
                 return BadRequest();
             }
         }
+
+
 
         [HttpGet]
         [Route("{Id}")]
@@ -86,7 +120,8 @@ namespace EcommerceApi.Controllers
                 Name = res.Name,
                 CategoryId = res.CategoryId,
                 Description = res.Description,
-                Image = res.Image,
+                 CategoryName = res.Category != null ? res.Category.Name : null,
+               ImageUrl=res.Image,
                 Price = res.Price,
                 Quantity = res.Quantity,
                 Stock = res.Stock,
@@ -127,7 +162,7 @@ namespace EcommerceApi.Controllers
             product.Price = productDTO.Price;
             product.Quantity = productDTO.Quantity;
             product.Stock = productDTO.Stock;
-            product.Image = productDTO.Image;
+            product.Image = productDTO.ImageUrl;
 
             try
             {
@@ -167,8 +202,8 @@ namespace EcommerceApi.Controllers
                     Price = product.Price,
                     Quantity = product.Quantity,
                     Stock = product.Stock,
-                    Image = product.Image,
                     CategoryName=product.Category.Name,
+                    ImageUrl=product.Image,
                 });                
             }
             if (products == null)
@@ -181,6 +216,31 @@ namespace EcommerceApi.Controllers
                 return Ok(productDTOs);
             }
 
+        }
+        [HttpGet("category/name/{name}")]
+        public IActionResult GetProductByCategoryName(string name)
+        {
+            var products = productRepository.GetAllProductByCategoryName(name);
+           
+
+            List<ProductDTO> productDTOs = new List<ProductDTO>();
+            foreach (var product in products)
+            {
+                productDTOs.Add(new ProductDTO
+                {
+                    Id = product.Id,
+                    Name = product.Name,
+                    CategoryId = product.CategoryId,
+                    Description = product.Description,
+                    Price = product.Price,
+                    Quantity = product.Quantity,
+                    Stock = product.Stock,
+                    CategoryName = product.Category?.Name, // Use null-conditional operator to avoid null reference
+                    ImageUrl = product.Image,
+                });
+            }
+
+            return Ok(productDTOs);
         }
     }
 

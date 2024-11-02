@@ -12,6 +12,7 @@ namespace data.Repository.IRepository
     { 
         List<Product>  GetAllProducts();
         List<Product> GetAllProductByCategory(int id);
+        List<Product> GetAllProductByCategoryName(string name);
         Product GetOne(Expression<Func<Product, bool>> filter);
         void AddProduct(Product product);
         void UpdateProduct(Product product);

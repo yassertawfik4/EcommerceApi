@@ -11,6 +11,7 @@ namespace Models.DTO
     {
         public int Id { get; set; }
         public string Name { get; set; } = null!;
-        public string? Image { get; set; }
+        public IFormFile? ImageFile { get; set; }
+        public string? Image { get; set; } // URL to access the image
     }
 }
